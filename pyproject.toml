@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Client and setup CLI for the resume-parser service (resume file -> structured JSON)"
 readme = "python/README.md"
 requires-python = ">=3.9"
+license = { text = "MIT" }
 dependencies = []
 
 [project.scripts]
