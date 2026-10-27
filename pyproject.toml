@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "resume-parser"
+version = "0.1.0"
+description = "Client and setup CLI for the resume-parser service (resume file -> structured JSON)"
+readme = "python/README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[project.scripts]
+resume-parser = "resume_parser.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "python" }
+packages = ["resume_parser"]

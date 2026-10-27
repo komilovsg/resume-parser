@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">resume-parser</title>
+  <desc id="desc">Файл резюме с выделенными строками превращается в структурированный JSON: имя, должность, контакты, навыки, опыт.</desc>
+
+  <rect width="1200" height="520" rx="26" fill="#0E1014"/>
+
+  <g id="title-block" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <text x="56" y="70" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#7D8590" letter-spacing="1">SELF-HOSTED · DOCKER · ЛЮБАЯ LLM</text>
+    <text x="54" y="132" font-size="60" font-weight="700" fill="#F4F1EA">resume-parser</text>
+    <text x="56" y="174" font-size="24" fill="#A9B0BB">Любое резюме → структурированный JSON для вашего сервиса</text>
+  </g>
+
+  <g id="formats" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="18" fill="#C9D1D9" text-anchor="middle">
+    <rect x="776" y="50" width="62" height="32" rx="8" fill="#1B2028"/><text x="807" y="72">PDF</text>
+    <rect x="846" y="50" width="72" height="32" rx="8" fill="#1B2028"/><text x="882" y="72">DOCX</text>
+    <rect x="926" y="50" width="62" height="32" rx="8" fill="#1B2028"/><text x="957" y="72">DOC</text>
+    <rect x="996" y="50" width="62" height="32" rx="8" fill="#1B2028"/><text x="1027" y="72">RTF</text>
+    <rect x="1066" y="50" width="78" height="32" rx="8" fill="#1B2028"/><text x="1105" y="72">ODT…</text>
+    <rect x="846" y="90" width="72" height="32" rx="8" fill="#1B2028"/><text x="882" y="112">HTML</text>
+    <rect x="926" y="90" width="62" height="32" rx="8" fill="#1B2028"/><text x="957" y="112">TXT</text>
+    <rect x="996" y="90" width="148" height="32" rx="8" fill="#1B2028"/><text x="1070" y="112">ФОТО ×6</text>
+  </g>
+
+  <g id="document" transform="translate(56 214)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <rect width="474" height="266" rx="14" fill="#F4F1EA"/>
+    <g fill="#FFE066">
+      <rect x="20" y="20" width="252" height="34" rx="4"/>
+      <rect x="20" y="62" width="440" height="28" rx="4"/>
+      <rect x="20" y="94" width="292" height="28" rx="4"/>
+      <rect x="20" y="214" width="380" height="28" rx="4"/>
+    </g>
+    <text x="26" y="45" font-size="24" font-weight="700" fill="#14161A">Алишер Каримов</text>
+    <text x="26" y="83" font-size="19" fill="#14161A">Желаемая должность: Backend-разработчик</text>
+    <text x="26" y="115" font-size="19" fill="#14161A">Душанбе · +992 90 123 45 67</text>
+    <text x="26" y="153" font-size="18" font-weight="700" fill="#6B6F76">Опыт работы</text>
+    <text x="26" y="179" font-size="18" fill="#6B6F76">Старший разработчик, «Пример Софт», 2021 —</text>
+    <text x="26" y="235" font-size="19" fill="#14161A">Node.js, TypeScript, PostgreSQL, Docker</text>
+    <text x="26" y="207" font-size="18" font-weight="700" fill="#6B6F76">Навыки</text>
+  </g>
+
+  <g id="arrow" fill="none" stroke="#FFE066" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M546 347 H598"/>
+    <path d="M588 337 L600 347 L588 357"/>
+  </g>
+
+  <g id="json" transform="translate(616 214)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="19" xml:space="preserve">
+    <rect width="528" height="266" rx="14" fill="#161A21" stroke="#2A303A"/>
+    <text x="24" y="38" fill="#7D8590">{</text>
+    <text x="44" y="66"><tspan fill="#8FB8FF">"fullName"</tspan><tspan fill="#7D8590">: </tspan><tspan fill="#FFE066">"Алишер Каримов"</tspan><tspan fill="#7D8590">,</tspan></text>
+    <text x="44" y="94"><tspan fill="#8FB8FF">"desiredPosition"</tspan><tspan fill="#7D8590">: </tspan><tspan fill="#FFE066">"Backend-разработчик"</tspan><tspan fill="#7D8590">,</tspan></text>
+    <text x="44" y="122"><tspan fill="#8FB8FF">"contacts"</tspan><tspan fill="#7D8590">: { </tspan><tspan fill="#8FB8FF">"city"</tspan><tspan fill="#7D8590">: </tspan><tspan fill="#FFE066">"Душанбе"</tspan><tspan fill="#7D8590">,</tspan></text>
+    <text x="84" y="150"><tspan fill="#8FB8FF">"phone"</tspan><tspan fill="#7D8590">: </tspan><tspan fill="#FFE066">"+992 90 123 45 67"</tspan><tspan fill="#7D8590"> },</tspan></text>
+    <text x="44" y="178"><tspan fill="#8FB8FF">"experience"</tspan><tspan fill="#7D8590">: [{ … }, { … }],</tspan></text>
+    <text x="44" y="206"><tspan fill="#8FB8FF">"skills"</tspan><tspan fill="#7D8590">: [</tspan><tspan fill="#FFE066">"Node.js"</tspan><tspan fill="#7D8590">, </tspan><tspan fill="#FFE066">"TypeScript"</tspan><tspan fill="#7D8590">, …]</tspan></text>
+    <text x="24" y="234" fill="#7D8590">}</text>
+  </g>
+</svg>
