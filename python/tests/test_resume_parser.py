@@ -35,7 +35,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(401, {"error": {"code": "unauthorized", "message": "no"}})
         if b"bad" in Handler.seen["body"]:
             return self._send(422, {"error": {"code": "empty", "message": "пусто"}})
-        self._send(200, {"resume": {"fullName": "A"}, "meta": {}})
+        self._send(200, {"resume": {"fullName": "A"}, "meta": {}, "profile": {}})
 
 
 class ClientTests(unittest.TestCase):

@@ -9,6 +9,7 @@ vi.mock("../../lib/parser", async (orig) => ({
 }));
 
 const parse = await import("./parse/route");
+const profile = await import("./profile/route");
 const health = await import("./health/route");
 
 let n = 0;
@@ -38,14 +39,15 @@ describe("bearer auth", () => {
   it("401 without or with wrong token, passes with right one", async () => {
     process.env.SERVICE_TOKEN = "secret";
     expect((await parse.POST(req("http://x/api/parse", { body: form() }))).status).toBe(401);
+    expect((await profile.POST(req("http://x/api/profile", { body: "{}" }))).status).toBe(401);
     const bad = await parse.POST(req("http://x/api/parse", { body: form(), headers: { authorization: "Bearer secreu" } }));
     expect(bad.status).toBe(401);
-    const ok = await parse.POST(req("http://x/api/parse?stream=0", { body: form(), headers: { authorization: "Bearer secret" } }));
-    expect(ok.status).toBe(415); // прошла авторизацию, упала на формате
+    const ok = await profile.POST(req("http://x/api/profile", { body: "{}", headers: { authorization: "Bearer secret" } }));
+    expect(ok.status).toBe(400); // прошла авторизацию, упала на валидации
   });
 
   it("no token configured -> open", async () => {
-    expect((await parse.POST(req("http://x/api/parse?stream=0", { body: form() }))).status).toBe(415);
+    expect((await profile.POST(req("http://x/api/profile", { body: "{}" }))).status).toBe(400);
   });
 });
 
@@ -69,14 +71,14 @@ describe("RATE_LIMIT", () => {
     process.env.RATE_LIMIT = "0";
     const ip = { "x-forwarded-for": "7.7.7.7" };
     let last = 0;
-    for (let i = 0; i < 15; i++) last = (await parse.POST(new Request("http://x/api/parse?stream=0", { method: "POST", headers: ip, body: form() }))).status;
-    expect(last).toBe(415);
+    for (let i = 0; i < 15; i++) last = (await profile.POST(new Request("http://x", { method: "POST", headers: ip, body: "{}" }))).status;
+    expect(last).toBe(400);
   });
   it("custom limit applies", async () => {
     process.env.RATE_LIMIT = "2";
     const ip = { "x-forwarded-for": "8.8.8.8" };
     const s: number[] = [];
-    for (let i = 0; i < 3; i++) s.push((await parse.POST(new Request("http://x/api/parse?stream=0", { method: "POST", headers: ip, body: form() }))).status);
-    expect(s).toEqual([415, 415, 429]);
+    for (let i = 0; i < 3; i++) s.push((await profile.POST(new Request("http://x", { method: "POST", headers: ip, body: "{}" }))).status);
+    expect(s).toEqual([400, 400, 429]);
   });
 });

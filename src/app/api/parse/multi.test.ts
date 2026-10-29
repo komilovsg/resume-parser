@@ -18,6 +18,8 @@ vi.mock("../../../lib/parser", async (orig) => {
     }),
   };
 });
+vi.mock("../../../lib/profile", () => ({ toProfile: () => ({}) }));
+vi.mock("../../../lib/profile/dict", () => ({ loadDict: async () => null }));
 
 const { POST } = await import("./route");
 

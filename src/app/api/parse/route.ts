@@ -1,4 +1,6 @@
 import { MAX_FILE_SIZE, MAX_IMAGES, ParseError, parseResume, parseResumeImages, type Stage } from "../../../lib/parser";
+import { toProfile } from "../../../lib/profile";
+import { loadDict } from "../../../lib/profile/dict";
 import { checkAuth, fail, rateLimit } from "../../../lib/service";
 
 export const runtime = "nodejs";
@@ -54,8 +56,11 @@ export async function POST(req: Request) {
   if (json) {
     try {
       const { resume, meta } = await run();
+      // без справочников поле profile не добавляется (не null), разбор работает как раньше
+      const dict = await loadDict();
+      const profile = dict ? toProfile(resume, dict) : undefined;
       console.log(JSON.stringify({ format: meta.format, size, ms: meta.ms, model: meta.model }));
-      return Response.json({ resume, meta }, { headers: { "Cache-Control": "no-store" } });
+      return Response.json({ resume, meta, ...(profile && { profile }) }, { headers: { "Cache-Control": "no-store" } });
     } catch (e) {
       if (e instanceof ParseError) {
         console.log(JSON.stringify({ size, ms: Date.now() - t0, error: e.code }));
@@ -76,9 +81,12 @@ export async function POST(req: Request) {
       };
       try {
         const { resume, meta } = await run((s) => send({ type: "stage", ...s }));
-          console.log(JSON.stringify({ format: meta.format, size, ms: meta.ms, model: meta.model }));
+        const dict = await loadDict();
+        if (dict) send({ type: "stage", stage: "matching" });
+        const profile = dict ? toProfile(resume, dict) : undefined;
+        console.log(JSON.stringify({ format: meta.format, size, ms: meta.ms, model: meta.model }));
         send({ type: "stage", stage: "done" });
-        send({ type: "result", resume, meta });
+        send({ type: "result", resume, meta, ...(profile && { profile }) });
       } catch (e) {
         if (e instanceof ParseError) {
           console.log(JSON.stringify({ size, ms: Date.now() - t0, error: e.code }));

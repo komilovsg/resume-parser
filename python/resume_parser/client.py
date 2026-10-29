@@ -88,7 +88,7 @@ def _read(file, filename):
 
 
 def parse_resume(file, filename=None, *, base_url=None, token=None, timeout=200):
-    """Parse a resume. Returns {"resume": ..., "meta": ...}.
+    """Parse a resume. Returns {"resume": ..., "meta": ..., "profile": ...}.
 
     `file` is a path, bytes or file object. Pass a list/tuple of them (up to 6
     photos, page order) to parse several photos as one resume; `filename` is
@@ -99,6 +99,14 @@ def parse_resume(file, filename=None, *, base_url=None, token=None, timeout=200)
     body, ct = build_multipart_files(parts)
     return _request(
         "POST", _base(base_url) + "/api/parse?stream=0", _headers(token, {"Content-Type": ct}), body, timeout
+    )
+
+
+def to_profile(resume, *, base_url=None, token=None, timeout=60):
+    """Recompute profile dictionary matching for an (edited) resume dict."""
+    body = json.dumps({"resume": resume}).encode("utf-8")
+    return _request(
+        "POST", _base(base_url) + "/api/profile", _headers(token, {"Content-Type": "application/json"}), body, timeout
     )
 
 

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { compressImage, isImage } from "./compress";
 import PhotoGrid from "./PhotoGrid";
@@ -10,17 +11,20 @@ import StageIcon from "./StageIcons";
 import ScanSheet, { type ScanMode } from "./ScanSheet";
 import ThemeToggle from "./ThemeToggle";
 import Notice from "./Notice";
-import type { Meta, Stage, StreamLine } from "./types";
+import ProfileTab from "./ProfileTab";
+import type { Meta, Stage, StreamLine, Profile } from "./types";
 import type { Resume } from "@/lib/parser";
 import { useResumeEdit } from "./useResumeEdit";
+import { DemoNav } from "./profile/nav";
+import { createDraft, syncFromParser } from "./profile/store";
 
 const MAX_PHOTOS = 6;
 const ACCEPT = ".pdf,.doc,.docx,.rtf,.odt,.txt,.html,image/*";
-const STEPS = ["Отправка файла", "Чтение документа", "ИИ собирает резюме"];
+const STEPS = ["Отправка файла", "Чтение документа", "ИИ собирает резюме", "Сверка со справочниками"];
 
-type Kind = "compress" | "upload" | "reading" | "ai" | "retry" | "done";
+type Kind = "compress" | "upload" | "reading" | "ai" | "retry" | "matching" | "done";
 type Busy = { kind: Kind; model?: string; reason?: string };
-type Payload = { resume: Resume; meta: Meta };
+type Payload = { resume: Resume; meta: Meta; profile?: Profile };
 type State =
   | { s: "idle" }
   | ({ s: "busy" } & Busy)
@@ -28,8 +32,8 @@ type State =
   | { s: "done"; p: Payload }
   | { s: "error"; message: string };
 
-const MODE: Record<Kind, ScanMode> = { compress: "scan", upload: "scan", reading: "scan", ai: "ai", retry: "retry", done: "done" };
-const stepOf = (k: Kind) => ({ compress: 0, upload: 0, reading: 1, ai: 2, retry: 2, done: 3 })[k];
+const MODE: Record<Kind, ScanMode> = { compress: "scan", upload: "scan", reading: "scan", ai: "ai", retry: "retry", matching: "match", done: "done" };
+const stepOf = (k: Kind) => ({ compress: 0, upload: 0, reading: 1, ai: 2, retry: 2, matching: 3, done: 4 })[k];
 
 const REASON: Record<string, string> = {
   busy: "занята",
@@ -45,6 +49,7 @@ function describe(b: Busy): { title: string; sub?: string } {
     case "reading": return { title: "Читаем документ" };
     case "ai": return { title: "ИИ собирает резюме", sub: b.model };
     case "retry": return { title: `Модель ${b.model} ${REASON[b.reason ?? "busy"] ?? "занята"}, пробуем другую` };
+    case "matching": return { title: "Сопоставляем со справочниками" };
     default: return { title: "Готово" };
   }
 }
@@ -91,7 +96,8 @@ export default function Demo() {
   const [note, setNote] = useState<string | null>(null);
   const pendingRef = useRef(pending);
   const nextId = useRef(0);
-  const [tab, setTab] = useState<"card" | "json">("card");
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"card" | "json" | "profile">("card");
   const [drag, setDrag] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [pct, setPct] = useState(0);
@@ -103,7 +109,44 @@ export default function Demo() {
   const errRef = useRef<HTMLDivElement>(null);
 
   const orig = st.s === "done" ? st.p.resume : null;
+  // без настроенных справочников сервер не присылает profile: вкладка и страницы анкеты скрыты
+  const hasProfile = st.s === "done" && !!st.p.profile;
   const ed = useResumeEdit(orig);
+  // сопоставление с анкетой для отредактированного резюме (оригинал — из потока разбора)
+  const [ys, setYs] = useState<{ base: Resume; for: Resume; y: Profile } | null>(null);
+  const [yErr, setYErr] = useState(false);
+  const edResume = ed?.resume ?? null;
+  const edited = !!orig && edResume !== orig;
+  const ysOk = ys && ys.base === orig ? ys : null;
+  const profileNow = st.s === "done" ? (edited && ysOk ? ysOk.y : st.p.profile) : null;
+  const yStale = edited && ysOk?.for !== edResume;
+
+  useEffect(() => {
+    if (!hasProfile || !orig || !edResume || edResume === orig || ys?.for === edResume) return;
+    const ac = new AbortController();
+    const run = async () => {
+      setYErr(false);
+      try {
+        const res = await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resume: edResume }),
+          signal: ac.signal,
+        });
+        if (!res.ok) return setYErr(true);
+        setYs({ base: orig, for: edResume, y: (await res.json()) as Profile });
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setYErr(true);
+      }
+    };
+    // на вкладке «Резюме» — debounce 400 мс, при переходе на другую вкладку — сразу
+    const t = setTimeout(run, tab === "card" ? 400 : 0);
+    return () => {
+      clearTimeout(t);
+      ac.abort();
+    };
+  }, [hasProfile, orig, edResume, tab, ys]);
+
   const active = st.s === "busy" || st.s === "finishing";
   useEffect(() => {
     if (!active) return;
@@ -206,7 +249,9 @@ export default function Demo() {
         } else if (m.type === "result") {
           settled = true;
           setTab("card");
-          setSt({ s: "finishing", p: { resume: m.resume, meta: m.meta } });
+          // демо: каждый успешный разбор сразу становится черновиком в «Мой профиль и резюме»
+          setDraftId(createDraft(m.resume, f.length > 1 ? `${f.length} фото` : f[0].name));
+          setSt({ s: "finishing", p: { resume: m.resume, meta: m.meta, profile: m.profile } });
         } else if (m.type === "error") {
           settled = true;
           fail(m.message);
@@ -232,6 +277,7 @@ export default function Demo() {
     clearPending();
     setNote(null);
     setTab("card");
+    setDraftId(null);
     setSt({ s: "idle" });
     window.scrollTo({ top: 0 });
   };
@@ -275,7 +321,7 @@ export default function Demo() {
     } catch {}
   }
 
-  const TABS = [["card", "Резюме"], ["json", "JSON"]] as const;
+  const TABS = (hasProfile ? [["card", "Резюме"], ["profile", "Анкета"], ["json", "JSON"]] : [["card", "Резюме"], ["json", "JSON"]]) as readonly (readonly [typeof tab, string])[];
   const tabIdx = TABS.findIndex(([k]) => k === tab);
   const onTabKey = (e: React.KeyboardEvent) => {
     const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
@@ -288,6 +334,9 @@ export default function Demo() {
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 pb-28 pt-10 sm:pt-16">
+      <div className="yd mb-4 !min-h-0 !bg-transparent">
+        <DemoNav current="parse" toggle={false} />
+      </div>
       <header className="mb-7 px-1">
         <div className="flex items-start justify-between gap-3">
           <h1 className="min-w-0 text-[34px] font-bold leading-[1.06] tracking-[-0.03em] sm:text-[44px]">Разбор резюме</h1>
@@ -434,6 +483,18 @@ export default function Demo() {
             </div>
           </div>
 
+          {draftId && hasProfile && (
+            <Link
+              href={`/profile/edit/${draftId}`}
+              onClick={() => edResume && syncFromParser(draftId, edResume)}
+              className="mb-4 flex min-h-14 items-center justify-between gap-3 rounded-2xl px-4 py-3 text-[15px] font-semibold text-white"
+              style={{ background: "var(--profile-fill)" }}
+            >
+              <span>Черновик создан в «Мой профиль и резюме»</span>
+              <span className="shrink-0 whitespace-nowrap rounded-xl bg-white/20 px-3 py-1.5">Открыть →</span>
+            </Link>
+          )}
+
           {files.length > 0 && <p className="mb-4 truncate px-1 text-[13px] text-muted">{files.length > 1 ? `${files.length} фото` : files[0].name}</p>}
 
           <div className="mb-4 space-y-3 empty:hidden">
@@ -451,6 +512,7 @@ export default function Demo() {
                 <pre className="max-h-[70vh] overflow-auto p-4 pt-16 font-mono text-xs leading-relaxed">{json}</pre>
               </div>
             )}
+            {tab === "profile" && profileNow && <ProfileTab y={profileNow} status={yStale ? (yErr ? "error" : "updating") : null} />}
           </div>
 
           <button className="btn btn-primary mt-6 w-full" onClick={reset}>

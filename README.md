@@ -105,6 +105,8 @@ resume-parser init --provider openai --api-key sk-... \
 | `SERVICE_TOKEN` | пусто | если задан, `/api/parse` требует `Authorization: Bearer` |
 | `RATE_LIMIT` | 10 | запросов за 10 минут с одного IP, `0` отключает |
 | `SERVICE_MODE` | `1` в образе | отключает демо-страницу (404) |
+| `PROFILE_DICT_URL` | пусто | ссылка (http/https) или путь к файлу справочников, без неё анкета не строится |
+| `PROFILE_DICT_TOKEN` | `BLOB_READ_WRITE_TOKEN` | Bearer-токен для закрытой ссылки на справочники |
 
 </details>
 
@@ -119,7 +121,9 @@ curl -H "Authorization: Bearer $TOKEN" -F file=@p1.jpg -F file=@p2.jpg "http://l
 
 | Метод | Что делает |
 |---|---|
-| `POST /api/parse` | multipart, поле `file` до 10 МБ. Для нескольких фото поле повторяется (до 6 фото, суммарно до 10 МБ). С `?stream=0` или `Accept: application/json` возвращает `{resume, meta}`, без них отдаёт поток NDJSON со стадиями. |
+| `POST /api/parse` | multipart, поле `file` до 10 МБ. Для нескольких фото поле повторяется (до 6 фото, суммарно до 10 МБ). С `?stream=0` или `Accept: application/json` возвращает `{resume, meta, profile}` (`profile` есть, только если подключены справочники), без них отдаёт поток NDJSON со стадиями. |
+| `POST /api/profile` | тело `{"resume": {...}}`, пересобирает анкету для отредактированного резюме |
+| `GET /api/profile/search?type=skill&q=…` | поиск по справочнику: `position`, `skill`, `region`, `specialization` |
 | `GET /api/health` | `{ok, provider, models, vision}`, без секретов, всегда публичный |
 
 Ошибки имеют вид `{"error": {"code", "message"}}`. Коды: 401, 413, 415 `unsupported`, 422 `empty`, 429, 502 `llm_failed`, 504 `timeout`.
@@ -143,6 +147,16 @@ async def parse(file: UploadFile):
 
 </details>
 
+## Анкета и справочники
+
+Если подключены справочники, в ответе появляется поле `profile` — резюме, приведённое к анкете:
+
+- навыки, должность, специализация и регион сопоставлены с записями справочника; у каждого совпадения есть статус: `auto` (точно или явная опечатка), `similar` (подобрано по сходству) или `none` (нет в справочнике, причина в `profile.missing`);
+- для `similar` и `none` в `alternatives` лежат до трёх ближайших записей;
+- `profile.view` — готовое к показу представление: зарплата («от 8 000 TJS в месяц»), суммарный стаж, образование, языки, контакты.
+
+Справочники в репозиторий не входят. Это один JSON-файл со списками `{id, name}`: `skills`, `positions`, `regions` (+`country`), `specializations` (+`parent`) и короткие перечни с `code` (занятость, график, валюты и т. д.); формат описан типом `Dict` в [`src/lib/profile/dict.ts`](src/lib/profile/dict.ts). Укажите путь или ссылку в `PROFILE_DICT_URL`; файл перечитывается раз в час. Без справочников парсер работает как обычно, только без `profile`.
+
 ## Как адаптировать
 
 Ядро не зависит от фреймворка и лежит в [`src/lib/parser/`](src/lib/parser/). Чтобы подстроить сервис под свою систему, сделайте форк и меняйте:
@@ -153,7 +167,7 @@ async def parse(file: UploadFile):
 | Свои справочники (занятость, график) и синонимы навыков | [`terms.ts`](src/lib/parser/terms.ts) |
 | Другой провайдер или модели по умолчанию | [`providers.ts`](src/lib/parser/providers.ts), [`structure.ts`](src/lib/parser/structure.ts) |
 | Новый формат файла | [`extract.ts`](src/lib/parser/extract.ts) |
-| Маппинг в свою базу | на своей стороне, по полю `resume` из ответа |
+| Свои справочники | свой JSON в `PROFILE_DICT_URL`, логика сопоставления в [`src/lib/profile/`](src/lib/profile/) |
 
 ## Разработка
 
